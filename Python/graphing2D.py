@@ -1,102 +1,145 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import line as line
+
+# Define the dimensions of the graph (symmetric in x and y by default)
 xDim = 1000
 yDim = xDim
+
+# Define width of the bins for grouping when creating gaussians
 binWidth = 10
+
+# The amount of bins is equal to the length in the x direction 
+# divided by the bin width
 numBins = (int)(xDim/binWidth)
+
+# keep track of the bins
 bins = [0] * numBins
-flicker = 1
 
+# Creates an array of length n with values between vmin and vmax.
+# The values in the array that get returned will have a normal
+# distribution about a random point between vmin and vmax
 def randrange(n, vmin, vmax):
-	'''
-	from https://matplotlib.org
-	returns an array of random numbers in the specified range
-	@param n    - length of array
-	@param vmin - minimum random number
-	@param vmax - maximum random number
-	'''
-	#np.random.rand() gives an array of randoms
-	randy = np.random.rand(1)[0] * 500
-	if (round(randy) % 2 == 0):
-		randy *= -1
-		print('yolo!', randy)
-	print('ono!', randy)
 
-	return (((vmax - vmin)) * np.random.normal(.5, .1, n)) + randy
+	# Get a random center point for the graph
+	rand = np.random.rand(1)[0] * xDim/2
+	if (round(rand * 10) % 2 == 0):
+		rand *= -1
 
+	return (((vmax - vmin)) * np.random.normal(.5, .1, n)) + rand
+
+# Sort the data points into bins
 def makebins(xvals, yvals):
+	# Keep track of the sum total to compute the mean
 	summ = 0
+
+	# Loop through all of the points contained by the graph
 	for i in range(len(xvals)):
+
+		# Set val as the value at this point in the graph
 		val = xvals[i]
+
+		# Add this value to the mean
 		summ += val
+
+		# Make sure that the value isn't too big or small to fit into
+		# one of the bins that are set up
 		if (val > xDim - binWidth or val < 0): continue
+
+		# Find and set the bin that this point belongs in
 		n = (int)(val / binWidth)
 		bins[n] += 1
 	print('actual mean', (summ/len(xvals)))
-	bins[0] = bins[1]
-	bins[len(bins) - 1] = bins[len(bins) - 2]
 	return bins
 
-def normalize(dataset):
-	for i in range(len(dataset)):
-		if ((dataset[i] / binWidth) > numBins - 1):
-			dataset[i] = xDim - binWidth
-		elif ((dataset[i] / binWidth) < 0):
-			dataset[i] = 0
-	return dataset
 
+# Generates random spots
+# TODO: Actual RNA spot detection
 def generatespots(numSpots, numPoints):
-	totalPoints = numSpots * numPoints
+	# Set up 2d array to contain X and Y values
 	pointsList = [[0],
 		      [0]]
+
+	# Generate a spot i times
 	for i in range(numSpots):
+
+		# Create an X and a Y set of indices
 		spotx = randrange(numPoints, 0, xDim)
 		spoty = randrange(numPoints, 0, yDim)
+
+		# Add this spot's points to the list of points
 		pointsList[0] = np.concatenate((pointsList[0], spotx))
 		pointsList[1] = np.concatenate((pointsList[1], spoty))
+
 	return pointsList
 
-def meandenoise(yvals, intensity):
-	yvalsprev = yvals
+# Denoise an array by smoothing it (pretty destructive so look out)
+def meandenoise(vals, intensity):
+	'''
+	 Hey bud, I'm Cory. I hope what I wrote here is looking
+	 good to you so far! I'm just writing this cuz I figured 
+	 it might be a little funny to see a message from me in 
+	the middle of the file. Have a good read, and a good day!
+	'''
+	# Keep track of the previous values so that when you loop thru
+	# for multiple denoisings you use the most recently denoised
+	# function
+	valsprev = vals
+	# Define an alternator so that the resulting function isn't offest
 	flicker = 1
+
+	# Denoise (intensity) times
 	for i in range(intensity):
-		yvals2 = [0] * len(yvalsprev)
-		for i in range(len(yvalsprev) - 1):
-			yvals2[i + flicker] = ((yvalsprev[i] + yvalsprev[i + 1]) /2 )
-		yvalsprev = yvals2
+
+		# Create an empty array equal to the previous values
+		vals2 = [0] * len(valsprev)
+
+		# Make each value the average of this value and the next
+		for i in range(len(valsprev) - 1):
+			vals2[i + flicker] = ((valsprev[i] + valsprev[i + 1]) /2 )
+
+		# Make the edited set the new set of values
+		valsprev = vals2
+
+		# Set flicker to the other value
 		if (flicker == 1): flicker = 0
 		else:flicker = 1
-	return yvals2
 
-# construct random points
-pList = generatespots(2,2000)
+	return vals2
 
-# get set of points
+# Construct random spots
+pList = generatespots(3,2000)
+
+# Get set of points
 xvals = pList[0]
 yvals = pList[1]
 
-
+# Create an array
 x = np.arange(numBins) * binWidth
-blo = makebins(xvals, yvals)
-plt.plot(x, blo, 'r', linewidth=2.0)
+bins = makebins(xvals, yvals)
+plt.plot(x, bins, 'r', linewidth=2.0)
 
 # label graph
 plt.ylabel('Height')
 plt.xlabel('Width')
+
+# Plot points
 plt.plot(xvals, yvals, 'r.', markersize=1)
 plt.axis([0, xDim, 0, yDim])
 
-blo = meandenoise(blo, 100)
-width = 1/1.5
-plt.bar(x, blo, 1, color="blue")
-plt.plot(x, blo,linewidth=2.0)
+# Plot the bar graph of bins 
 
-blo = meandenoise(blo, 100)
-plt.plot(x, blo,linewidth=2.0)
-blo = meandenoise(blo, 100)
-plt.plot(x, blo,linewidth=2.0)
-blo = meandenoise(blo, 100)
-plt.plot(x, blo,linewidth=2.0)
+# Plot a bunch of different levels of denoising
+bins = meandenoise(bins, 100)
+plt.plot(x, bins,linewidth=2.0)
+
+plt.bar(x, bins, xDim / 200, color="blue")
+
+bins = meandenoise(bins, 100)
+plt.plot(x, bins,linewidth=2.0)
+bins = meandenoise(bins, 100)
+plt.plot(x, bins,linewidth=2.0)
+bins = meandenoise(bins, 100)
+plt.plot(x, bins,linewidth=2.0)
 
 plt.show()
