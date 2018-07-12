@@ -1,11 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import line as line
-xDim = 100
+xDim = 1000
 yDim = xDim
-binWidth = 3
+binWidth = 10
 numBins = (int)(xDim/binWidth)
 bins = [0] * numBins
+flicker = 1
 
 def randrange(n, vmin, vmax):
 	'''
@@ -16,20 +17,33 @@ def randrange(n, vmin, vmax):
 	@param vmax - maximum random number
 	'''
 	#np.random.rand() gives an array of randoms
-	return (vmax - vmin) * np.random.normal(.5, .1, n)
+	randy = np.random.rand(1)[0] * 500
+	if (round(randy) % 2 == 0):
+		randy *= -1
+		print('yolo!', randy)
+	print('ono!', randy)
+
+	return (((vmax - vmin)) * np.random.normal(.5, .1, n)) + randy
 
 def makebins(xvals, yvals):
 	summ = 0
 	for i in range(len(xvals)):
-		summ += xvals[i]
-		n = (int)(xvals[i] / binWidth)
+		val = xvals[i]
+		summ += val
+		if (val > xDim - binWidth or val < 0): continue
+		n = (int)(val / binWidth)
 		bins[n] += 1
 	print('actual mean', (summ/len(xvals)))
+	bins[0] = bins[1]
+	bins[len(bins) - 1] = bins[len(bins) - 2]
 	return bins
 
 def normalize(dataset):
 	for i in range(len(dataset)):
-		dataset[i] = (50 * (dataset[i] / 150))
+		if ((dataset[i] / binWidth) > numBins - 1):
+			dataset[i] = xDim - binWidth
+		elif ((dataset[i] / binWidth) < 0):
+			dataset[i] = 0
 	return dataset
 
 def generatespots(numSpots, numPoints):
@@ -37,48 +51,52 @@ def generatespots(numSpots, numPoints):
 	pointsList = [[0],
 		      [0]]
 	for i in range(numSpots):
-		rand = np.random.rand(1)[0]
-		spotx = randrange(numPoints, 0, yDim)
+		spotx = randrange(numPoints, 0, xDim)
 		spoty = randrange(numPoints, 0, yDim)
 		pointsList[0] = np.concatenate((pointsList[0], spotx))
 		pointsList[1] = np.concatenate((pointsList[1], spoty))
-		'''
-		xvals = np.concatenate((spot1x, spot2x, spot3x))
-		yvals = np.concatenate((spot1y, spot2y, spot3y))
-		'''
 	return pointsList
+
+def meandenoise(yvals, intensity):
+	yvalsprev = yvals
+	flicker = 1
+	for i in range(intensity):
+		yvals2 = [0] * len(yvalsprev)
+		for i in range(len(yvalsprev) - 1):
+			yvals2[i + flicker] = ((yvalsprev[i] + yvalsprev[i + 1]) /2 )
+		yvalsprev = yvals2
+		if (flicker == 1): flicker = 0
+		else:flicker = 1
+	return yvals2
+
 # construct random points
-
-# first spot
-spot1x = randrange(xDim, 0, yDim) - xDim/10 * 3
-spot1y = randrange(xDim, 0, yDim) - xDim/10 * 3
-
-# second spot
-spot2x = randrange(xDim, 0, yDim) + xDim/10
-spot2y = randrange(xDim, 0, yDim) + xDim/10
-
-# second spot
-#spot3x = randrange(xDim, 0, yDim)
-#spot3y = randrange(xDim, 0, yDim)
-
-pList = generatespots(5,50)
+pList = generatespots(2,2000)
 
 # get set of points
 xvals = pList[0]
 yvals = pList[1]
+
+
+x = np.arange(numBins) * binWidth
+blo = makebins(xvals, yvals)
+plt.plot(x, blo, 'r', linewidth=2.0)
 
 # label graph
 plt.ylabel('Height')
 plt.xlabel('Width')
 plt.plot(xvals, yvals, 'r.', markersize=1)
 plt.axis([0, xDim, 0, yDim])
-blo = makebins(xvals, yvals)
-x = np.arange(numBins) * binWidth
-print(blo)
-width = 1/1.5
-#plt.bar(x, blo, 1, color="blue")
-plt.plot(x, blo, linewidth=2.0)
 
-lineee = line.line(1, 200)
-print(lineee.yfromx(10))
+blo = meandenoise(blo, 100)
+width = 1/1.5
+plt.bar(x, blo, 1, color="blue")
+plt.plot(x, blo,linewidth=2.0)
+
+blo = meandenoise(blo, 100)
+plt.plot(x, blo,linewidth=2.0)
+blo = meandenoise(blo, 100)
+plt.plot(x, blo,linewidth=2.0)
+blo = meandenoise(blo, 100)
+plt.plot(x, blo,linewidth=2.0)
+
 plt.show()
