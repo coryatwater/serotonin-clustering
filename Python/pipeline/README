@@ -1,0 +1,11 @@
+1) spot filtering
+2) spot detection
+3) dbscan
+4) matlab data converter
+
+good dbscan configs
+------------
+set_2, green: 40 eps, 45 min pts
+set_2, red:
+sert_set_1 red:
+sert_set_1 green:
